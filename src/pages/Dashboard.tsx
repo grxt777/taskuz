@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
 import { tasks, taskers, statusConfig } from '../data/mockData';
 import { Button, Card, Avatar, Rating, Badge, StatCard, TabBar, PriceRange, LocationBadge, TimeBadge } from '../components/ui';
@@ -8,7 +9,8 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { setPage, setSelectedTaskId, userRole, userName } = useStore();
+  const { userRole, userName } = useStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
   const isTasker = userRole === 'tasker';
@@ -33,7 +35,7 @@ export default function DashboardPage() {
             {isTasker ? 'Here is an overview of your earnings and tasks.' : 'Here is what is happening with your tasks.'}
           </p>
         </div>
-        <Button onClick={() => setPage(isTasker ? 'tasks' : 'create-task')} icon={isTasker ? <Briefcase size={16} /> : <Plus size={16} />} size="lg">
+        <Button onClick={() => navigate(isTasker ? '/tasks' : '/tasks/new')} icon={isTasker ? <Briefcase size={16} /> : <Plus size={16} />} size="lg">
           {isTasker ? 'Find Tasks' : 'Post a Task'}
         </Button>
       </div>
@@ -64,7 +66,7 @@ export default function DashboardPage() {
             <div className="p-5 pb-0">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-neutral-900">Tasks</h2>
-                <Button variant="ghost" size="sm" onClick={() => setPage('tasks')} iconRight={<ArrowRight size={14} />}>View All</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')} iconRight={<ArrowRight size={14} />}>View All</Button>
               </div>
               <TabBar tabs={tabLabels} active={activeTab} onChange={setActiveTab} />
             </div>
@@ -83,7 +85,7 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={task.id}
-                      onClick={() => { setSelectedTaskId(task.id); setPage('task-detail'); }}
+                      onClick={() => navigate(`/tasks/${task.id}`)}
                       className="flex items-center gap-4 p-4 rounded-xl hover:bg-neutral-50 transition-colors cursor-pointer group"
                     >
                       <div className="flex-1 min-w-0">
@@ -142,10 +144,10 @@ export default function DashboardPage() {
             <h3 className="text-sm font-semibold text-neutral-900 mb-4">Quick Actions</h3>
             <div className="space-y-2">
               {[
-                { icon: <MessageSquare size={16} />, label: 'Messages', badge: '3', onClick: () => setPage('chat') },
+                { icon: <MessageSquare size={16} />, label: 'Messages', badge: '3', onClick: () => navigate('/chat') },
                 { icon: <Calendar size={16} />, label: 'Schedule', onClick: () => {} },
-                { icon: <Star size={16} />, label: 'Reviews', onClick: () => setPage('profile') },
-                { icon: <MapPin size={16} />, label: 'Addresses', onClick: () => setPage('profile') },
+                { icon: <Star size={16} />, label: 'Reviews', onClick: () => navigate('/profile') },
+                { icon: <MapPin size={16} />, label: 'Addresses', onClick: () => navigate('/profile') },
               ].map(a => (
                 <button
                   key={a.label}
@@ -171,7 +173,7 @@ export default function DashboardPage() {
               <h3 className="text-sm font-semibold text-neutral-900 mb-4">Recommended Taskers</h3>
               <div className="space-y-3">
                 {taskers.slice(0, 3).map(tk => (
-                  <div key={tk.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => { useStore.getState().setSelectedTaskerId(tk.id); setPage('tasker-profile'); }}>
+                  <div key={tk.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => navigate(`/tasker/${tk.id}`)}>
                     <Avatar name={tk.name} size="sm" verified={tk.is_verified} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-neutral-900 truncate">{tk.name}</p>

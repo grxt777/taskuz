@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
 import { chatMessages } from '../data/mockData';
 import { Button, Avatar, Badge } from '../components/ui';
 import { Send, ArrowLeft, Phone, MoreVertical, Paperclip, CheckCheck, Image } from 'lucide-react';
 
 export default function ChatPage() {
-  const { setPage } = useStore();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState(chatMessages);
   const [newMsg, setNewMsg] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -32,7 +33,7 @@ export default function ChatPage() {
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-neutral-100 mb-0 shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={() => setPage('dashboard')} className="text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer lg:hidden">
+          <button onClick={() => navigate('/dashboard')} className="text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer lg:hidden">
             <ArrowLeft size={20} />
           </button>
           <Avatar name="Usmon Ochilov" size="md" verified />

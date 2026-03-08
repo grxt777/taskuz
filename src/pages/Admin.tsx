@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
 import { tasks, taskers, statusConfig } from '../data/mockData';
 import { Button, Card, Avatar, Rating, Badge, StatCard, TabBar } from '../components/ui';
@@ -8,7 +9,7 @@ import {
 } from 'lucide-react';
 
 export default function AdminPage() {
-  const { setPage, setSelectedTaskId } = useStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
   return (
@@ -159,7 +160,7 @@ export default function AdminPage() {
                           {new Intl.NumberFormat().format(task.agreed_price || task.budget_min)} sum
                         </td>
                         <td className="py-3 px-3 text-right">
-                          <button onClick={() => { setSelectedTaskId(task.id); setPage('task-detail'); }} className="text-neutral-400 hover:text-neutral-600 cursor-pointer">
+                          <button onClick={() => navigate(`/tasks/${task.id}`)} className="text-neutral-400 hover:text-neutral-600 cursor-pointer">
                             <Eye size={16} />
                           </button>
                         </td>

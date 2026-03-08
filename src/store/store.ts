@@ -1,10 +1,9 @@
 import { create } from 'zustand';
+import { loadProfile, saveProfile, clearProfile, type Profile } from '../lib/auth';
 
 export type Language = 'en' | 'uz' | 'ru';
 export type UserRole = 'client' | 'tasker' | 'admin';
 export type TaskStatus = 'posted' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
-export type Page = 'home' | 'auth' | 'tasks' | 'task-detail' | 'create-task' | 'dashboard' | 'profile' | 'tasker-profile' | 'chat' | 'admin' | 'support';
-
 export interface Category {
   id: string;
   name_en: string;
@@ -78,41 +77,54 @@ export interface ChatMessage {
 }
 
 interface AppState {
-  page: Page;
   language: Language;
   isAuthenticated: boolean;
   userRole: UserRole;
   userName: string;
   userAvatar: string;
-  selectedTaskId: string | null;
-  selectedTaskerId: string | null;
   mobileMenuOpen: boolean;
   
-  setPage: (page: Page) => void;
   setLanguage: (lang: Language) => void;
   login: (role: UserRole, name: string) => void;
+  loginWithProfile: (profile: Profile) => void;
   logout: () => void;
-  setSelectedTaskId: (id: string | null) => void;
-  setSelectedTaskerId: (id: string | null) => void;
+  hydrateFromStorage: () => void;
   setMobileMenuOpen: (open: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
-  page: 'home',
   language: 'en',
   isAuthenticated: false,
   userRole: 'client',
   userName: '',
   userAvatar: '',
-  selectedTaskId: null,
-  selectedTaskerId: null,
   mobileMenuOpen: false,
 
-  setPage: (page) => set({ page, mobileMenuOpen: false }),
   setLanguage: (language) => set({ language }),
-  login: (userRole, userName) => set({ isAuthenticated: true, userRole, userName, userAvatar: userName.charAt(0).toUpperCase(), page: userRole === 'admin' ? 'admin' : 'dashboard' }),
-  logout: () => set({ isAuthenticated: false, userRole: 'client', userName: '', page: 'home' }),
-  setSelectedTaskId: (selectedTaskId) => set({ selectedTaskId }),
-  setSelectedTaskerId: (selectedTaskerId) => set({ selectedTaskerId }),
+  login: (userRole, userName) => set({ isAuthenticated: true, userRole, userName, userAvatar: userName.charAt(0).toUpperCase() }),
+  loginWithProfile: (profile) => {
+    saveProfile(profile);
+    set({
+      isAuthenticated: true,
+      userRole: profile.role as UserRole,
+      userName: profile.name,
+      userAvatar: profile.name.charAt(0).toUpperCase(),
+    });
+  },
+  logout: () => {
+    clearProfile();
+    set({ isAuthenticated: false, userRole: 'client', userName: '', userAvatar: '' });
+  },
+  hydrateFromStorage: () => {
+    const p = loadProfile();
+    if (p) {
+      set({
+        isAuthenticated: true,
+        userRole: p.role as UserRole,
+        userName: p.name,
+        userAvatar: p.name.charAt(0).toUpperCase(),
+      });
+    }
+  },
   setMobileMenuOpen: (mobileMenuOpen) => set({ mobileMenuOpen }),
 }));

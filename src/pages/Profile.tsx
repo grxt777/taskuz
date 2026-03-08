@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
 import { reviews } from '../data/mockData';
 import { Button, Card, Avatar, Rating, Badge, Input, TabBar } from '../components/ui';
@@ -8,7 +9,8 @@ import {
 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { setPage, logout, userName, userRole, language, setLanguage } = useStore();
+  const { logout, userName, userRole, language, setLanguage } = useStore();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
 
   return (
@@ -65,7 +67,7 @@ export default function ProfilePage() {
               ))}
               <div className="border-t border-neutral-100 mt-2 pt-2">
                 <button
-                  onClick={() => { logout(); setPage('home'); }}
+                  onClick={() => { logout(); navigate('/'); }}
                   className="flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-left text-red-500 hover:bg-red-50 transition-all cursor-pointer"
                 >
                   <LogOut size={16} />

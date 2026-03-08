@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useStore } from '../store/store';
+import { useNavigate } from 'react-router-dom';
 import { Button, Card, Input, TextArea, Select, Badge } from '../components/ui';
 import { ArrowLeft, Send, Headphones, MessageCircle, FileText, Clock } from 'lucide-react';
 
 export default function SupportPage() {
-  const { setPage } = useStore();
+  const navigate = useNavigate();
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('normal');
@@ -21,7 +21,7 @@ export default function SupportPage() {
         <p className="text-sm text-neutral-500 mb-8">Ticket ID: <span className="font-mono font-medium text-neutral-900">#TKT-2847</span></p>
         <p className="text-xs text-neutral-400 mb-8">We typically respond within 2-4 hours during business hours.</p>
         <div className="flex gap-3 justify-center">
-          <Button onClick={() => setPage('dashboard')}>Back to Dashboard</Button>
+          <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
           <Button variant="outline" onClick={() => setSubmitted(false)}>Submit Another</Button>
         </div>
       </div>
@@ -30,7 +30,7 @@ export default function SupportPage() {
 
   return (
     <div className="animate-fade-in-up max-w-2xl mx-auto">
-      <button onClick={() => setPage('dashboard')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
+      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
         <ArrowLeft size={14} /> Back
       </button>
 

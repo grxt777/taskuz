@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
 import { categories, taskers } from '../data/mockData';
 import { Button, Card, Avatar, Rating, VerifiedBadge, Badge } from '../components/ui';
@@ -17,7 +18,8 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 export default function HomePage() {
-  const { setPage, isAuthenticated, language } = useStore();
+  const { isAuthenticated, language } = useStore();
+  const navigate = useNavigate();
 
   const t = (en: string, uz: string, ru: string) => {
     if (language === 'uz') return uz;
@@ -50,7 +52,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 size="xl"
-                onClick={() => setPage(isAuthenticated ? 'create-task' : 'auth')}
+                onClick={() => navigate(isAuthenticated ? '/tasks/new' : '/auth')}
                 iconRight={<ArrowRight size={18} />}
               >
                 {t('Post a Task', "Vazifa yarating", 'Создать задачу')}
@@ -58,7 +60,7 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 size="xl"
-                onClick={() => setPage(isAuthenticated ? 'tasks' : 'auth')}
+                onClick={() => navigate(isAuthenticated ? '/tasks' : '/auth')}
               >
                 {t('Become a Tasker', "Ijrochi bo'ling", 'Стать исполнителем')}
               </Button>
@@ -146,7 +148,7 @@ export default function HomePage() {
                 {t('Browse categories', 'Kategoriyalarni ko\'ring', 'Категории услуг')}
               </h2>
             </div>
-            <button onClick={() => setPage('tasks')} className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer">
+            <button onClick={() => navigate('/tasks')} className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer">
               {t('View all', 'Hammasini ko\'rish', 'Смотреть все')} <ChevronRight size={14} />
             </button>
           </div>
@@ -155,7 +157,7 @@ export default function HomePage() {
             {categories.map((cat, i) => (
               <button
                 key={cat.id}
-                onClick={() => setPage('tasks')}
+                onClick={() => navigate('/tasks')}
                 className={`group flex items-center gap-3.5 p-4 rounded-2xl border border-neutral-200/70 hover:border-neutral-300 hover:shadow-premium bg-white transition-all duration-300 text-left cursor-pointer animate-fade-in-up stagger-${Math.min(i + 1, 8)}`}
               >
                 <div className="w-10 h-10 rounded-xl bg-neutral-50 group-hover:bg-neutral-900 group-hover:text-white flex items-center justify-center text-neutral-600 transition-all duration-300 shrink-0">
@@ -214,7 +216,7 @@ export default function HomePage() {
                     <span className="font-bold text-neutral-900">{new Intl.NumberFormat().format(tasker.hourly_rate)}</span>
                     <span className="text-neutral-400"> sum/hr</span>
                   </p>
-                  <Button variant="outline" size="sm" onClick={() => { useStore.getState().setSelectedTaskerId(tasker.id); setPage('tasker-profile'); }}>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/tasker/${tasker.id}`)}>
                     View Profile
                   </Button>
                 </div>
@@ -289,10 +291,10 @@ export default function HomePage() {
                 {t('Join thousands of happy customers and professionals on TaskUz.', "TaskUz'da minglab baxtli mijozlar va mutaxassislarga qo'shiling.", 'Присоединяйтесь к тысячам довольных пользователей TaskUz.')}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button size="xl" onClick={() => setPage('auth')} className="!bg-white !text-neutral-900 hover:!bg-neutral-100">
+                <Button size="xl" onClick={() => navigate('/auth')} className="!bg-white !text-neutral-900 hover:!bg-neutral-100">
                   {t('Get Started Free', "Bepul boshlang", 'Начать бесплатно')}
                 </Button>
-                <Button variant="ghost" size="xl" onClick={() => setPage('tasks')} className="!text-neutral-300 hover:!text-white hover:!bg-white/10">
+                <Button variant="ghost" size="xl" onClick={() => navigate('/tasks')} className="!text-neutral-300 hover:!text-white hover:!bg-white/10">
                   {t('Browse Tasks', 'Vazifalarni ko\'ring', 'Просмотреть задачи')}
                 </Button>
               </div>

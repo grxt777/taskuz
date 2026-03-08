@@ -1,17 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
+import { sendOTP, verifyOTP } from '../lib/auth';
 import { Button, Input } from '../components/ui';
-import { Phone, ArrowRight, ArrowLeft, Lock, User, Briefcase } from 'lucide-react';
+import { Phone, ArrowRight, ArrowLeft, Lock, User, Briefcase, Loader2 } from 'lucide-react';
+
+const AUTH_DRAFT_KEY = 'taskuz_auth_draft';
 
 type AuthStep = 'phone' | 'otp' | 'role' | 'profile';
 
+interface AuthDraft {
+  phone: string;
+  name: string;
+  email: string;
+  selectedRole: 'client' | 'tasker';
+}
+
+function loadDraft(): AuthDraft {
+  try {
+    const s = localStorage.getItem(AUTH_DRAFT_KEY);
+    if (s) return JSON.parse(s);
+  } catch {}
+  return { phone: '+998', name: '', email: '', selectedRole: 'client' };
+}
+
+function saveDraft(d: AuthDraft) {
+  localStorage.setItem(AUTH_DRAFT_KEY, JSON.stringify(d));
+}
+
 export default function AuthPage() {
-  const { login, setPage, language } = useStore();
+  const { loginWithProfile, language } = useStore();
+  const navigate = useNavigate();
   const [step, setStep] = useState<AuthStep>('phone');
   const [phone, setPhone] = useState('+998');
   const [otp, setOtp] = useState('');
   const [selectedRole, setSelectedRole] = useState<'client' | 'tasker'>('client');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const d = loadDraft();
+    setPhone(d.phone);
+    setName(d.name);
+    setEmail(d.email);
+    setSelectedRole(d.selectedRole);
+  }, []);
+
+  const saveFormDraft = () => {
+    saveDraft({ phone, name, email, selectedRole });
+  };
 
   const t = (en: string, uz: string, ru: string) => {
     if (language === 'uz') return uz;
@@ -19,20 +58,81 @@ export default function AuthPage() {
     return en;
   };
 
-  const handlePhoneSubmit = () => {
-    if (phone.length >= 13) setStep('otp');
+  const handlePhoneSubmit = async () => {
+    if (phone.length < 13) return;
+    setError('');
+    setLoading(true);
+    try {
+      await sendOTP(phone);
+      saveDraft({ phone, name, email, selectedRole });
+      setStep('otp');
+      setOtp('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to send code');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOtpSubmit = () => {
-    if (otp.length === 6) setStep('role');
+  const handleOtpSubmit = async () => {
+    if (otp.length < 6) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await verifyOTP({ phone, code: otp });
+      if (res.profile) {
+        loginWithProfile(res.profile);
+        localStorage.removeItem(AUTH_DRAFT_KEY);
+        navigate('/dashboard');
+      } else {
+        saveDraft({ phone, name, email, selectedRole });
+        setStep('role');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Invalid or expired code');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRoleSubmit = () => {
+    saveDraft({ phone, name, email, selectedRole });
     setStep('profile');
   };
 
-  const handleProfileSubmit = () => {
-    login(selectedRole, name || 'User');
+  const handleProfileSubmit = async () => {
+    if (!name.trim()) return;
+    setError('');
+    setLoading(true);
+    try {
+      const { profile } = await verifyOTP({
+        phone,
+        code: otp,
+        name: name.trim(),
+        email: email.trim() || undefined,
+        role: selectedRole,
+      });
+      loginWithProfile(profile);
+      localStorage.removeItem(AUTH_DRAFT_KEY);
+      navigate('/dashboard');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await sendOTP(phone);
+      setOtp('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to resend');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,7 +141,7 @@ export default function AuthPage() {
       <div className="hidden lg:flex lg:w-[45%] bg-neutral-900 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(255,255,255,0.08),transparent)]" />
         <div className="relative flex flex-col justify-between p-12 w-full">
-          <button onClick={() => setPage('home')} className="flex items-center gap-2 cursor-pointer">
+          <button onClick={() => navigate('/')} className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
               <span className="text-neutral-900 text-sm font-bold">T</span>
             </div>
@@ -81,12 +181,16 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <button onClick={() => setPage('home')} className="lg:hidden flex items-center gap-2 mb-10 cursor-pointer">
+          <button onClick={() => navigate('/')} className="lg:hidden flex items-center gap-2 mb-10 cursor-pointer">
             <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center">
               <span className="text-white text-sm font-bold">T</span>
             </div>
             <span className="text-neutral-900 font-bold text-lg">TaskUz</span>
           </button>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>
+          )}
 
           {/* ── Step: Phone ── */}
           {step === 'phone' && (
@@ -100,7 +204,11 @@ export default function AuthPage() {
               <Input
                 label={t('Phone Number', 'Telefon raqami', 'Номер телефона')}
                 value={phone}
-                onChange={setPhone}
+                onChange={(v) => {
+                  const digits = v.replace(/\D/g, '');
+                  const uzb = digits.startsWith('998') ? digits.slice(3).slice(0, 9) : digits.slice(0, 9);
+                  setPhone(uzb.length ? '+998' + uzb : '+998');
+                }}
                 placeholder="+998 90 123 45 67"
                 icon={<Phone size={16} />}
                 hint={t('We will send a verification code', "Tasdiqlash kodini yuboramiz", 'Мы отправим код подтверждения')}
@@ -109,11 +217,11 @@ export default function AuthPage() {
                 size="xl"
                 fullWidth
                 onClick={handlePhoneSubmit}
-                disabled={phone.length < 13}
-                iconRight={<ArrowRight size={16} />}
+                disabled={phone.length < 13 || loading}
+                iconRight={loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
                 className="mt-6"
               >
-                {t('Continue', 'Davom etish', 'Продолжить')}
+                {loading ? t('Sending...', 'Yuborilmoqda...', 'Отправка...') : t('Continue', 'Davom etish', 'Продолжить')}
               </Button>
               <p className="text-xs text-neutral-400 text-center mt-6">
                 {t('By continuing, you agree to our', "Davom etib, siz rozilik bildirasiz", 'Продолжая, вы соглашаетесь с')}{' '}
@@ -127,7 +235,7 @@ export default function AuthPage() {
           {/* ── Step: OTP ── */}
           {step === 'otp' && (
             <div className="animate-fade-in-up">
-              <button onClick={() => setStep('phone')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
+              <button onClick={() => { setStep('phone'); setError(''); }} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
                 <ArrowLeft size={14} /> {t('Back', 'Orqaga', 'Назад')}
               </button>
               <h1 className="text-2xl font-bold text-neutral-900 tracking-tight mb-2">
@@ -147,14 +255,14 @@ export default function AuthPage() {
                 size="xl"
                 fullWidth
                 onClick={handleOtpSubmit}
-                disabled={otp.length < 6}
-                iconRight={<ArrowRight size={16} />}
+                disabled={otp.length < 6 || loading}
+                iconRight={loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
                 className="mt-6"
               >
-                {t('Verify', 'Tasdiqlash', 'Подтвердить')}
+                {loading ? t('Verifying...', 'Tekshirilmoqda...', 'Проверка...') : t('Verify', 'Tasdiqlash', 'Подтвердить')}
               </Button>
-              <button className="w-full text-center text-sm text-neutral-500 hover:text-neutral-900 mt-4 transition-colors cursor-pointer">
-                {t('Resend code', 'Kodni qayta yuborish', 'Отправить код повторно')}
+              <button onClick={handleResendOtp} disabled={loading} className="w-full text-center text-sm text-neutral-500 hover:text-neutral-900 mt-4 transition-colors cursor-pointer disabled:opacity-50">
+                {loading ? t('Sending...', 'Yuborilmoqda...', 'Отправка...') : t('Resend code', 'Kodni qayta yuborish', 'Отправить код повторно')}
               </button>
             </div>
           )}
@@ -232,6 +340,8 @@ export default function AuthPage() {
                 />
                 <Input
                   label={t('Email', 'Email', 'Email')}
+                  value={email}
+                  onChange={setEmail}
                   placeholder="you@example.com"
                   type="email"
                 />
@@ -240,11 +350,11 @@ export default function AuthPage() {
                 size="xl"
                 fullWidth
                 onClick={handleProfileSubmit}
-                disabled={!name.trim()}
-                iconRight={<ArrowRight size={16} />}
+                disabled={!name.trim() || loading}
+                iconRight={loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
                 className="mt-6"
               >
-                {t('Get Started', 'Boshlash', 'Начать')}
+                {loading ? t('Saving...', 'Saqlanmoqda...', 'Сохранение...') : t('Get Started', 'Boshlash', 'Начать')}
               </Button>
             </div>
           )}

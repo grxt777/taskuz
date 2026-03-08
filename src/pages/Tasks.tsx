@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store/store';
 import { categories, tasks, taskers, formatPrice, statusConfig } from '../data/mockData';
 import { Button, Card, Avatar, Rating, Badge, Input, TextArea, Select, PriceRange, LocationBadge, TimeBadge, VerifiedBadge } from '../components/ui';
@@ -21,7 +22,8 @@ const iconMapSmall: Record<string, React.ReactNode> = {
 
 // ─── Task List Page ───────────────────────────────
 export function TaskListPage() {
-  const { setPage, setSelectedTaskId, userRole } = useStore();
+  const { userRole } = useStore();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -44,7 +46,7 @@ export function TaskListPage() {
           <p className="text-sm text-neutral-500 mt-0.5">{filteredTasks.length} tasks found</p>
         </div>
         {userRole === 'client' && (
-          <Button onClick={() => setPage('create-task')} icon={<Plus size={16} />} size="lg">
+          <Button onClick={() => navigate('/tasks/new')} icon={<Plus size={16} />} size="lg">
             Post a Task
           </Button>
         )}
@@ -90,7 +92,7 @@ export function TaskListPage() {
             <Card
               key={task.id}
               hover
-              onClick={() => { setSelectedTaskId(task.id); setPage('task-detail'); }}
+              onClick={() => navigate(`/tasks/${task.id}`)}
               className={`animate-fade-in-up stagger-${Math.min(i + 1, 8)}`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -136,16 +138,17 @@ export function TaskListPage() {
 
 // ─── Task Detail Page ─────────────────────────────
 export function TaskDetailPage() {
-  const { setPage, selectedTaskId, setSelectedTaskerId } = useStore();
-  const task = tasks.find(t => t.id === selectedTaskId);
+  const { taskId } = useParams<{ taskId: string }>();
+  const navigate = useNavigate();
+  const task = tasks.find(t => t.id === taskId);
 
-  if (!task) return null;
+  if (!task) return <div className="text-center py-12"><p className="text-neutral-500">Task not found</p><button onClick={() => navigate('/tasks')} className="text-sm text-neutral-900 mt-2 underline">Back to tasks</button></div>;
 
   const sc = statusConfig[task.status];
 
   return (
     <div className="animate-fade-in-up max-w-4xl mx-auto">
-      <button onClick={() => setPage('tasks')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
+      <button onClick={() => navigate('/tasks')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
         <ArrowLeft size={14} /> Back to tasks
       </button>
 
@@ -213,7 +216,7 @@ export function TaskDetailPage() {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setPage('chat')}>Message</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/chat')}>Message</Button>
               </div>
             </Card>
           )}
@@ -238,7 +241,7 @@ export function TaskDetailPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold text-neutral-900">{formatPrice(tk.hourly_rate)}<span className="text-xs text-neutral-400 font-normal">/hr</span></p>
-                      <Button variant="primary" size="sm" onClick={() => { setSelectedTaskerId(tk.id); setPage('tasker-profile'); }}>
+                      <Button variant="primary" size="sm" onClick={() => navigate(`/tasker/${tk.id}`)}>
                         View
                       </Button>
                     </div>
@@ -281,7 +284,7 @@ export function TaskDetailPage() {
               {task.status === 'posted' && (
                 <>
                   <Button fullWidth variant="primary" size="lg">Accept Task</Button>
-                  <Button fullWidth variant="outline" size="lg" onClick={() => setPage('chat')}>Send Message</Button>
+                  <Button fullWidth variant="outline" size="lg" onClick={() => navigate('/chat')}>Send Message</Button>
                 </>
               )}
               {task.status === 'assigned' && (
@@ -293,7 +296,7 @@ export function TaskDetailPage() {
               {task.status === 'completed' && (
                 <Button fullWidth variant="primary" size="lg" icon={<Star size={16} />}>Leave Review</Button>
               )}
-              <Button fullWidth variant="ghost" size="lg" onClick={() => setPage('support')}>Report Issue</Button>
+              <Button fullWidth variant="ghost" size="lg" onClick={() => navigate('/support')}>Report Issue</Button>
             </div>
           </Card>
         </div>
@@ -304,7 +307,8 @@ export function TaskDetailPage() {
 
 // ─── Create Task Wizard ───────────────────────────
 export function CreateTaskPage() {
-  const { setPage, language } = useStore();
+  const { language } = useStore();
+  const navigate = useNavigate();
   const [wizardStep, setWizardStep] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [title, setTitle] = useState('');
@@ -321,7 +325,7 @@ export function CreateTaskPage() {
 
   return (
     <div className="animate-fade-in-up max-w-2xl mx-auto">
-      <button onClick={() => setPage('tasks')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
+      <button onClick={() => navigate('/tasks')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
         <ArrowLeft size={14} /> Back
       </button>
 
@@ -467,7 +471,7 @@ export function CreateTaskPage() {
           </div>
           <div className="flex justify-between mt-6">
             <Button variant="ghost" onClick={() => setWizardStep(2)} icon={<ArrowLeft size={14} />}>Back</Button>
-            <Button onClick={() => setPage('tasks')} icon={<CheckCircle2 size={16} />} size="lg">Post Task</Button>
+            <Button onClick={() => navigate('/tasks')} icon={<CheckCircle2 size={16} />} size="lg">Post Task</Button>
           </div>
         </Card>
       )}

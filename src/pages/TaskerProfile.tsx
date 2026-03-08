@@ -1,15 +1,17 @@
+import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
 import { taskers, formatPrice } from '../data/mockData';
 import { Button, Card, Avatar, Rating, Badge, VerifiedBadge } from '../components/ui';
 import { ArrowLeft, MapPin, Clock, CheckCircle2, Star, MessageSquare, Award, Briefcase } from 'lucide-react';
 
 export default function TaskerProfilePage() {
-  const { setPage, selectedTaskerId } = useStore();
-  const tasker = taskers.find(t => t.id === selectedTaskerId) || taskers[0];
+  const { taskerId } = useParams<{ taskerId: string }>();
+  const navigate = useNavigate();
+  const tasker = taskers.find(t => t.id === taskerId) || taskers[0];
 
   return (
     <div className="animate-fade-in-up max-w-4xl mx-auto">
-      <button onClick={() => setPage('tasks')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
         <ArrowLeft size={14} /> Back
       </button>
 
@@ -114,8 +116,8 @@ export default function TaskerProfilePage() {
               </div>
             </div>
             <div className="space-y-2 mt-5">
-              <Button fullWidth size="lg" onClick={() => setPage('create-task')}>Hire {tasker.name.split(' ')[0]}</Button>
-              <Button fullWidth variant="outline" size="lg" onClick={() => setPage('chat')} icon={<MessageSquare size={16} />}>
+              <Button fullWidth size="lg" onClick={() => navigate('/tasks/new')}>Hire {tasker.name.split(' ')[0]}</Button>
+              <Button fullWidth variant="outline" size="lg" onClick={() => navigate('/chat')} icon={<MessageSquare size={16} />}>
                 Send Message
               </Button>
             </div>
