@@ -50,6 +50,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Шаблон должен быть добавлен и одобрен в devsms.uz или my.eskiz.uz
+    // DEVSMS_MESSAGE_TEMPLATE: "TaskUz: Ваш код: {code}" — замените {code} на реальный код
+    const template = Deno.env.get('DEVSMS_MESSAGE_TEMPLATE') || 'TaskUz: Ваш код: {code}';
+    const message = template.replace('{code}', code);
+
     const smsRes = await fetch('https://devsms.uz/api/send_sms.php', {
       method: 'POST',
       headers: {
@@ -58,7 +63,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         phone: cleanPhone,
-        message: `TaskUz: Ваш код подтверждения: ${code}`,
+        message,
         from: '4546',
       }),
     });
