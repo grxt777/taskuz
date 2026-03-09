@@ -34,7 +34,23 @@ supabase functions deploy verify-otp
 - Документация: https://devsms.uz/api/docs.php  
 - Токен уже указан в `supabase secrets`
 
-### ⚠️ Модерация SMS-шаблона (обязательно)
+### Режим разработки (пока шаблон не утверждён)
+
+Чтобы тестировать без SMS, включите режим skip:
+
+```bash
+npx supabase secrets set OTP_SKIP_SMS=true
+npx supabase functions deploy send-otp
+```
+
+В этом режиме код всегда **123456** — вводите его при верификации. После одобрения шаблона отключите:
+
+```bash
+npx supabase secrets set OTP_SKIP_SMS=false
+npx supabase functions deploy send-otp
+```
+
+### ⚠️ Модерация SMS-шаблона (для продакшена)
 
 Перед отправкой SMS текст должен быть одобрен. Добавьте шаблон одним из способов:
 

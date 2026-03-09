@@ -27,7 +27,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const code = generateOTP();
+    const skipSms = Deno.env.get('OTP_SKIP_SMS') === 'true';
+    const code = skipSms ? '123456' : generateOTP();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min
 
     const supabase = createClient(
@@ -40,6 +41,13 @@ Deno.serve(async (req) => {
       code,
       expires_at: expiresAt.toISOString(),
     });
+
+    if (skipSms) {
+      return new Response(
+        JSON.stringify({ success: true, message: 'OTP sent (dev mode)', hint: 'Use code: 123456' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const devsmsToken = Deno.env.get('DEVSMS_TOKEN');
     if (!devsmsToken) {
