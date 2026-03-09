@@ -2,20 +2,39 @@ import { useStore } from './store/store';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppRoutes } from './routes';
 import {
-  LayoutDashboard, ListTodo, MessageSquare, User,
-  Bell, Menu, X, Search, Globe, ChevronDown, HelpCircle, LogOut, Plus
+  LayoutDashboard,
+  ListTodo,
+  MessageSquare,
+  User,
+  Bell,
+  Menu,
+  X,
+  Search,
+  Globe,
+  ChevronDown,
+  HelpCircle,
+  LogOut,
+  Plus,
 } from 'lucide-react';
 
-function Navigation() {
+// ─── Dashboard Header / Layout ────────────────────
+function DashboardHeader() {
   const {
-    isAuthenticated, userRole, userName, userAvatar,
-    language, setLanguage, logout, mobileMenuOpen, setMobileMenuOpen
+    isAuthenticated,
+    userRole,
+    userName,
+    userAvatar,
+    language,
+    setLanguage,
+    logout,
+    mobileMenuOpen,
+    setMobileMenuOpen,
   } = useStore();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
 
-  if (!isAuthenticated || path === '/auth') return null;
+  if (!isAuthenticated) return null;
 
   const isAdmin = userRole === 'admin';
 
@@ -156,19 +175,8 @@ function Navigation() {
   );
 }
 
-function PageLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useStore();
-  const location = useLocation();
-  const showNav = isAuthenticated && location.pathname !== '/auth' && location.pathname !== '/';
-
-  return (
-    <div className={showNav ? 'pt-16' : ''}>
-      {children}
-    </div>
-  );
-}
-
-function HomeNav() {
+// ─── Landing Header / Layout ──────────────────────
+function LandingHeader() {
   const { isAuthenticated, language, setLanguage } = useStore();
   const navigate = useNavigate();
 
@@ -218,17 +226,25 @@ function HomeNav() {
   );
 }
 
+// ─── App Root: route‑based layouts ────────────────
 export default function App() {
+  const { isAuthenticated } = useStore();
   const location = useLocation();
-  const showHomeNav = location.pathname === '/';
+  const path = location.pathname;
+
+  const isLanding = path === '/';
+  const isAuthPage = path === '/auth';
+  const isDashboardArea = !isLanding && !isAuthPage;
+  const showDashboardHeader = isDashboardArea && isAuthenticated;
 
   return (
     <div className="min-h-screen bg-white">
-      {showHomeNav && <HomeNav />}
-      <Navigation />
-      <PageLayout>
+      {isLanding && <LandingHeader />}
+      {showDashboardHeader && <DashboardHeader />}
+      <div className={showDashboardHeader ? 'pt-16' : ''}>
         <AppRoutes />
-      </PageLayout>
+      </div>
     </div>
   );
 }
+
