@@ -39,6 +39,10 @@ export interface Profile {
   role: 'client' | 'tasker' | 'admin';
   created_at: string;
   updated_at: string;
+  default_address?: string | null;
+  notify_push?: boolean;
+  notify_email?: boolean;
+  notify_sms?: boolean;
 }
 
 const STORAGE_KEY = 'taskuz_profile';

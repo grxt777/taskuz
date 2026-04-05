@@ -1,7 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store/store';
-import { categories, tasks, taskers, formatPrice, statusConfig } from '../lib/taskDisplay';
+import { loadProfile } from '../lib/auth';
+import { formatPrice, statusConfig } from '../lib/taskDisplay';
+import {
+  fetchAllPostedTasks,
+  fetchOpenTasks,
+  fetchTaskById,
+  fetchServiceCategories,
+  fetchTaskerSummaries,
+  createTask,
+  type TaskerSummary,
+} from '../lib/taskQueries';
+import type { Task, Category } from '../store/store';
 import { Button, Card, Avatar, Rating, Badge, Input, TextArea, Select, PriceRange, LocationBadge, TimeBadge, VerifiedBadge } from '../components/ui';
 import {
   Search, SlidersHorizontal, MapPin, Clock, ArrowRight, ArrowLeft,
@@ -27,8 +38,29 @@ export function TaskListPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [listLoading, setListLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const filteredTasks = tasks.filter(t => {
+  useEffect(() => {
+    let c = false;
+    (async () => {
+      setListLoading(true);
+      const [cats, t] = await Promise.all([
+        fetchServiceCategories(),
+        userRole === 'tasker' ? fetchOpenTasks() : fetchAllPostedTasks(),
+      ]);
+      if (c) return;
+      setCategories(cats);
+      setTasks(t);
+      setListLoading(false);
+    })();
+    return () => {
+      c = true;
+    };
+  }, [userRole]);
+
+  const filteredTasks = tasks.filter((t) => {
     const matchesSearch = !search || t.title.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = !categoryFilter || t.category_id === categoryFilter;
     const matchesStatus = !statusFilter || t.status === statusFilter;
@@ -43,7 +75,9 @@ export function TaskListPage() {
           <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
             {userRole === 'tasker' ? 'Available Tasks' : 'Browse Tasks'}
           </h1>
-          <p className="text-sm text-neutral-500 mt-0.5">{filteredTasks.length} tasks found</p>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            {listLoading ? 'Loading…' : `${filteredTasks.length} tasks found`}
+          </p>
         </div>
         {userRole === 'client' && (
           <Button onClick={() => navigate('/tasks/new')} icon={<Plus size={16} />} size="lg">
@@ -86,6 +120,9 @@ export function TaskListPage() {
 
       {/* Task cards */}
       <div className="space-y-3">
+        {!listLoading && filteredTasks.length === 0 && (
+          <p className="text-sm text-neutral-500 text-center py-12">No tasks yet. Post one to get started.</p>
+        )}
         {filteredTasks.map((task, i) => {
           const sc = statusConfig[task.status];
           return (
@@ -140,20 +177,62 @@ export function TaskListPage() {
 export function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
-  const task = tasks.find(t => t.id === taskId);
+  const [task, setTask] = useState<Task | null>(null);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [recommended, setRecommended] = useState<TaskerSummary[]>([]);
 
-  if (!task) return <div className="text-center py-12"><p className="text-neutral-500">Task not found</p><button onClick={() => navigate('/tasks')} className="text-sm text-neutral-900 mt-2 underline">Back to tasks</button></div>;
+  useEffect(() => {
+    if (!taskId) {
+      setDetailLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setDetailLoading(true);
+      const t = await fetchTaskById(taskId);
+      if (cancelled) return;
+      setTask(t);
+      if (t?.status === 'posted') {
+        const rec = await fetchTaskerSummaries(6);
+        if (!cancelled) setRecommended(rec);
+      } else {
+        setRecommended([]);
+      }
+      setDetailLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId]);
+
+  if (detailLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-neutral-500">Loading…</p>
+      </div>
+    );
+  }
+
+  if (!task) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-neutral-500">Task not found</p>
+        <button type="button" onClick={() => navigate('/tasks')} className="text-sm text-neutral-900 mt-2 underline cursor-pointer">
+          Back to tasks
+        </button>
+      </div>
+    );
+  }
 
   const sc = statusConfig[task.status];
 
   return (
     <div className="animate-fade-in-up max-w-4xl mx-auto">
-      <button onClick={() => navigate('/tasks')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
+      <button type="button" onClick={() => navigate('/tasks')} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer">
         <ArrowLeft size={14} /> Back to tasks
       </button>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Main */}
         <div className="lg:col-span-2 space-y-5">
           <Card>
             <div className="flex items-center gap-2 mb-4">
@@ -161,7 +240,7 @@ export function TaskDetailPage() {
                 {sc.label}
               </Badge>
               <Badge variant="outline">{task.category_name}</Badge>
-              <Badge variant="outline">{task.subcategory_name}</Badge>
+              {task.subcategory_name ? <Badge variant="outline">{task.subcategory_name}</Badge> : null}
             </div>
             <h1 className="text-xl font-bold text-neutral-900 tracking-tight mb-3">{task.title}</h1>
             <p className="text-sm text-neutral-600 leading-relaxed mb-5">{task.description}</p>
@@ -176,10 +255,10 @@ export function TaskDetailPage() {
                 <span className="text-neutral-500">Time:</span>
                 <span className="font-medium text-neutral-900">{task.scheduled_time}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm col-span-2">
                 <MapPin size={14} className="text-neutral-400" />
                 <span className="text-neutral-500">Location:</span>
-                <span className="font-medium text-neutral-900">{task.address}</span>
+                <span className="font-medium text-neutral-900">{task.address}{task.city ? `, ${task.city}` : ''}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <DollarSign size={14} className="text-neutral-400" />
@@ -189,7 +268,6 @@ export function TaskDetailPage() {
             </div>
           </Card>
 
-          {/* Client info */}
           <Card>
             <h3 className="text-sm font-semibold text-neutral-900 mb-4">Posted by</h3>
             <div className="flex items-center gap-3">
@@ -201,7 +279,6 @@ export function TaskDetailPage() {
             </div>
           </Card>
 
-          {/* Assigned tasker */}
           {task.tasker_name && (
             <Card>
               <h3 className="text-sm font-semibold text-neutral-900 mb-4">Assigned Tasker</h3>
@@ -216,43 +293,42 @@ export function TaskDetailPage() {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/chat')}>Message</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/chat')}>
+                  Message
+                </Button>
               </div>
             </Card>
           )}
 
-          {/* Suggested taskers */}
           {task.status === 'posted' && (
             <Card>
               <h3 className="text-sm font-semibold text-neutral-900 mb-4">Recommended Professionals</h3>
               <div className="space-y-3">
-                {taskers.slice(0, 3).map(tk => (
-                  <div key={tk.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-neutral-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={tk.name} size="md" verified={tk.is_verified} />
-                      <div>
-                        <p className="text-sm font-semibold text-neutral-900">{tk.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Rating value={tk.rating} size={11} />
-                          <span className="text-xs text-neutral-400">{tk.total_tasks} tasks</span>
-                          <span className="text-xs text-neutral-400">{tk.distance_km} km</span>
+                {recommended.length === 0 ? (
+                  <p className="text-sm text-neutral-500">No taskers registered yet.</p>
+                ) : (
+                  recommended.map((tk) => (
+                    <div key={tk.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-neutral-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={tk.name} size="md" />
+                        <div>
+                          <p className="text-sm font-semibold text-neutral-900">{tk.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {tk.rating > 0 ? <Rating value={tk.rating} size={11} /> : <span className="text-xs text-neutral-400">No reviews</span>}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-neutral-900">{formatPrice(tk.hourly_rate)}<span className="text-xs text-neutral-400 font-normal">/hr</span></p>
                       <Button variant="primary" size="sm" onClick={() => navigate(`/tasker/${tk.id}`)}>
                         View
                       </Button>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Card>
           )}
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-5">
           {task.agreed_price && (
             <Card>
@@ -264,11 +340,11 @@ export function TaskDetailPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-500">Platform Fee (20%)</span>
-                  <span className="text-neutral-500">{formatPrice(task.agreed_price * 0.2)}</span>
+                  <span className="text-neutral-500">{formatPrice(Math.round(task.agreed_price * 0.2))}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-neutral-500">Tax (12%)</span>
-                  <span className="text-neutral-500">{formatPrice(task.agreed_price * 0.12)}</span>
+                  <span className="text-neutral-500">{formatPrice(Math.round(task.agreed_price * 0.12))}</span>
                 </div>
                 <div className="border-t border-neutral-100 pt-2 flex justify-between text-sm">
                   <span className="font-semibold text-neutral-900">Total</span>
@@ -283,21 +359,34 @@ export function TaskDetailPage() {
             <div className="space-y-2">
               {task.status === 'posted' && (
                 <>
-                  <Button fullWidth variant="primary" size="lg">Accept Task</Button>
-                  <Button fullWidth variant="outline" size="lg" onClick={() => navigate('/chat')}>Send Message</Button>
+                  <Button fullWidth variant="primary" size="lg" disabled>
+                    Accept Task
+                  </Button>
+                  <Button fullWidth variant="outline" size="lg" onClick={() => navigate('/chat')}>
+                    Send Message
+                  </Button>
                 </>
               )}
               {task.status === 'assigned' && (
-                <Button fullWidth variant="primary" size="lg">Start Timer</Button>
+                <Button fullWidth variant="primary" size="lg" disabled>
+                  Start Timer
+                </Button>
               )}
               {task.status === 'in_progress' && (
-                <Button fullWidth variant="primary" size="lg">Complete Task</Button>
+                <Button fullWidth variant="primary" size="lg" disabled>
+                  Complete Task
+                </Button>
               )}
               {task.status === 'completed' && (
-                <Button fullWidth variant="primary" size="lg" icon={<Star size={16} />}>Leave Review</Button>
+                <Button fullWidth variant="primary" size="lg" icon={<Star size={16} />} disabled>
+                  Leave Review
+                </Button>
               )}
-              <Button fullWidth variant="ghost" size="lg" onClick={() => navigate('/support')}>Report Issue</Button>
+              <Button fullWidth variant="ghost" size="lg" onClick={() => navigate('/support')}>
+                Report Issue
+              </Button>
             </div>
+            <p className="text-[11px] text-neutral-400 mt-3">Assignment and reviews will use the API in a later update.</p>
           </Card>
         </div>
       </div>
@@ -306,6 +395,12 @@ export function TaskDetailPage() {
 }
 
 // ─── Create Task Wizard ───────────────────────────
+const CITY_OPTIONS = [
+  { value: 'tashkent', label: 'Tashkent' },
+  { value: 'samarkand', label: 'Samarkand' },
+  { value: 'bukhara', label: 'Bukhara' },
+];
+
 export function CreateTaskPage() {
   const { language } = useStore();
   const navigate = useNavigate();
@@ -318,10 +413,54 @@ export function CreateTaskPage() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      const cats = await fetchServiceCategories();
+      setCategories(cats);
+    })();
+  }, []);
 
   const steps = ['Category', 'Details', 'Schedule', 'Review'];
 
   const t = (en: string) => en;
+
+  const cityLabel = CITY_OPTIONS.find((o) => o.value === city)?.label ?? city;
+
+  const submitTask = async () => {
+    const profile = loadProfile();
+    if (!profile?.id) {
+      navigate('/auth');
+      return;
+    }
+    const cat = categories.find((c) => c.id === selectedCategory);
+    setPosting(true);
+    try {
+      const created = await createTask({
+        clientId: profile.id,
+        categoryId: selectedCategory,
+        categoryName: cat?.name_en ?? selectedCategory,
+        title: title.trim(),
+        description: description.trim(),
+        budgetMin: Math.max(0, Number(budgetMin) || 0),
+        budgetMax: Math.max(0, Number(budgetMax) || 0),
+        scheduledDate: date,
+        scheduledTime: time,
+        address: address.trim(),
+        city: cityLabel || city,
+      });
+      if (created) {
+        navigate(`/tasks/${created.id}`);
+      } else {
+        window.alert('Не удалось создать задачу. Проверьте миграции БД в Supabase и сеть.');
+      }
+    } finally {
+      setPosting(false);
+    }
+  };
 
   return (
     <div className="animate-fade-in-up max-w-2xl mx-auto">
@@ -355,6 +494,11 @@ export function CreateTaskPage() {
           </h2>
           <p className="text-sm text-neutral-500 mb-6">Choose the category that best describes your task.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {categories.length === 0 && (
+              <p className="col-span-full text-sm text-neutral-500 py-6 text-center">
+                Loading categories… If this persists, apply the latest database migration in Supabase.
+              </p>
+            )}
             {categories.map(cat => (
               <button
                 key={cat.id}
@@ -425,17 +569,21 @@ export function CreateTaskPage() {
             <Input label={t('Address')} value={address} onChange={setAddress} placeholder="Enter full address" icon={<MapPin size={14} />} />
             <Select
               label={t('City')}
-              options={[
-                { value: 'tashkent', label: 'Tashkent' },
-                { value: 'samarkand', label: 'Samarkand' },
-                { value: 'bukhara', label: 'Bukhara' },
-              ]}
+              value={city}
+              onChange={setCity}
+              options={CITY_OPTIONS}
               placeholder="Select city"
             />
           </div>
           <div className="flex justify-between mt-6">
             <Button variant="ghost" onClick={() => setWizardStep(1)} icon={<ArrowLeft size={14} />}>Back</Button>
-            <Button onClick={() => setWizardStep(3)} iconRight={<ArrowRight size={14} />}>Continue</Button>
+            <Button
+              onClick={() => setWizardStep(3)}
+              disabled={!date || !time || !address.trim() || !city}
+              iconRight={<ArrowRight size={14} />}
+            >
+              Continue
+            </Button>
           </div>
         </Card>
       )}
@@ -464,6 +612,10 @@ export function CreateTaskPage() {
               <span className="text-sm text-neutral-500">Date & Time</span>
               <span className="text-sm font-medium text-neutral-900">{date && time ? `${date} at ${time}` : '—'}</span>
             </div>
+            <div className="flex justify-between py-2 border-b border-neutral-200/50">
+              <span className="text-sm text-neutral-500">City</span>
+              <span className="text-sm font-medium text-neutral-900">{cityLabel || '—'}</span>
+            </div>
             <div className="flex justify-between py-2">
               <span className="text-sm text-neutral-500">Address</span>
               <span className="text-sm font-medium text-neutral-900">{address || '—'}</span>
@@ -471,7 +623,9 @@ export function CreateTaskPage() {
           </div>
           <div className="flex justify-between mt-6">
             <Button variant="ghost" onClick={() => setWizardStep(2)} icon={<ArrowLeft size={14} />}>Back</Button>
-            <Button onClick={() => navigate('/tasks')} icon={<CheckCircle2 size={16} />} size="lg">Post Task</Button>
+            <Button onClick={() => void submitTask()} disabled={posting} icon={<CheckCircle2 size={16} />} size="lg">
+              {posting ? 'Posting…' : 'Post Task'}
+            </Button>
           </div>
         </Card>
       )}

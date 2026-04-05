@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useStore } from './store/store';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppRoutes } from './routes';
@@ -230,6 +231,11 @@ function LandingHeader() {
 export default function App() {
   const { isAuthenticated } = useStore();
   const location = useLocation();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void useStore.getState().refreshProfileFromServer();
+  }, [isAuthenticated]);
   const path = location.pathname;
 
   const isLanding = path === '/';

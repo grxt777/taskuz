@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { loadProfile, saveProfile, clearProfile, type Profile } from '../lib/auth';
+import { fetchProfileById } from '../lib/profileDb';
 
 export type Language = 'en' | 'uz' | 'ru';
 export type UserRole = 'client' | 'tasker' | 'admin';
@@ -17,6 +18,8 @@ export interface Category {
 
 export interface Task {
   id: string;
+  client_id?: string;
+  tasker_id?: string | null;
   title: string;
   description: string;
   category_id: string;
@@ -38,6 +41,8 @@ export interface Task {
   tasker_rating?: number;
   distance_km?: number;
   created_at: string;
+  updated_at?: string;
+  completed_at?: string | null;
   photos?: string[];
 }
 
@@ -89,6 +94,7 @@ interface AppState {
   loginWithProfile: (profile: Profile) => void;
   logout: () => void;
   hydrateFromStorage: () => void;
+  refreshProfileFromServer: () => Promise<void>;
   setMobileMenuOpen: (open: boolean) => void;
 }
 
@@ -123,6 +129,19 @@ export const useStore = create<AppState>((set) => ({
         userRole: p.role as UserRole,
         userName: p.name,
         userAvatar: p.name.charAt(0).toUpperCase(),
+      });
+    }
+  },
+  refreshProfileFromServer: async () => {
+    const p = loadProfile();
+    if (!p?.id) return;
+    const fresh = await fetchProfileById(p.id);
+    if (fresh) {
+      saveProfile(fresh);
+      set({
+        userName: fresh.name,
+        userAvatar: fresh.name.charAt(0).toUpperCase(),
+        userRole: fresh.role as UserRole,
       });
     }
   },
