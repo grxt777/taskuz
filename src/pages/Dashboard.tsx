@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
-import { tasks, taskers, statusConfig } from '../data/mockData';
+import { tasks, taskers, statusConfig } from '../lib/taskDisplay';
 import { Button, Card, Avatar, Rating, Badge, StatCard, TabBar, PriceRange, LocationBadge, TimeBadge } from '../components/ui';
 import {
   Plus, Calendar, DollarSign, TrendingUp, CheckCircle2, Clock,

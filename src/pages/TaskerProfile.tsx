@@ -1,13 +1,24 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
-import { taskers, formatPrice } from '../data/mockData';
+import { taskers, formatPrice } from '../lib/taskDisplay';
 import { Button, Card, Avatar, Rating, Badge, VerifiedBadge } from '../components/ui';
 import { ArrowLeft, MapPin, Clock, CheckCircle2, Star, MessageSquare, Award, Briefcase } from 'lucide-react';
 
 export default function TaskerProfilePage() {
   const { taskerId } = useParams<{ taskerId: string }>();
   const navigate = useNavigate();
-  const tasker = taskers.find(t => t.id === taskerId) || taskers[0];
+  const tasker = taskers.find(t => t.id === taskerId);
+
+  if (!tasker) {
+    return (
+      <div className="animate-fade-in-up max-w-4xl mx-auto text-center py-16">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900 mb-6 transition-colors cursor-pointer mx-auto">
+          <ArrowLeft size={14} /> Back
+        </button>
+        <p className="text-neutral-600">Tasker not found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in-up max-w-4xl mx-auto">

@@ -81,11 +81,12 @@ interface InputProps {
   error?: string;
   hint?: string;
   className?: string;
+  readOnly?: boolean;
 }
 
 export function Input({
   label, placeholder, value, onChange, type = 'text',
-  icon, error, hint, className = ''
+  icon, error, hint, className = '', readOnly
 }: InputProps) {
   const [show, setShow] = useState(false);
   const isPassword = type === 'password';
@@ -98,9 +99,11 @@ export function Input({
         <input
           type={isPassword ? (show ? 'text' : 'password') : type}
           value={value}
+          readOnly={readOnly}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
-          className={`w-full h-11 bg-white border rounded-[10px] text-sm text-neutral-900 placeholder-neutral-400 transition-all duration-200 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100
+          className={`w-full h-11 border rounded-[10px] text-sm text-neutral-900 placeholder-neutral-400 transition-all duration-200 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100
+            ${readOnly ? 'bg-neutral-50 cursor-default' : 'bg-white'}
             ${icon ? 'pl-10 pr-4' : 'px-4'}
             ${isPassword ? 'pr-10' : ''}
             ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-50' : 'border-neutral-200 hover:border-neutral-300'}
@@ -252,11 +255,13 @@ interface StatCardProps {
   label: string;
   value: string;
   change?: string;
-  changeType?: 'up' | 'down';
+  changeType?: 'up' | 'down' | 'neutral';
   icon?: ReactNode;
 }
 
 export function StatCard({ label, value, change, changeType, icon }: StatCardProps) {
+  const changeCls =
+    changeType === 'up' ? 'text-emerald-600' : changeType === 'down' ? 'text-red-500' : 'text-neutral-400';
   return (
     <Card>
       <div className="flex items-start justify-between">
@@ -264,7 +269,7 @@ export function StatCard({ label, value, change, changeType, icon }: StatCardPro
           <p className="text-[13px] text-neutral-500 font-medium">{label}</p>
           <p className="text-2xl font-bold text-neutral-900 tracking-tight">{value}</p>
           {change && (
-            <p className={`text-xs font-medium ${changeType === 'up' ? 'text-emerald-600' : 'text-red-500'}`}>
+            <p className={`text-xs font-medium ${changeCls}`}>
               {changeType === 'up' ? '+' : ''}{change}
             </p>
           )}

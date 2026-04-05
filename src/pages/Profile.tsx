@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/store';
-import { reviews } from '../data/mockData';
+import { loadProfile } from '../lib/auth';
+import { reviews } from '../lib/taskDisplay';
 import { Button, Card, Avatar, Rating, Badge, Input, TabBar } from '../components/ui';
 import {
   Settings, MapPin, CreditCard, Bell, Shield, LogOut,
-  ChevronRight, Star, Clock, CheckCircle2, Edit3, Globe, Phone, Mail
+  ChevronRight, Edit3, Globe, Phone, Mail
 } from 'lucide-react';
 
 export default function ProfilePage() {
   const { logout, userName, userRole, language, setLanguage } = useStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
+  const profile = loadProfile();
 
   return (
     <div className="animate-fade-in max-w-4xl mx-auto">
@@ -26,13 +28,16 @@ export default function ProfilePage() {
               <Badge variant={userRole === 'tasker' ? 'info' : 'default'} size="md">{userRole === 'tasker' ? 'Tasker' : 'Client'}</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-500">
-              <span className="flex items-center gap-1"><Phone size={12} /> +998 90 *** ** 67</span>
-              <span className="flex items-center gap-1"><Mail size={12} /> user@example.com</span>
-              <span className="flex items-center gap-1"><MapPin size={12} /> Tashkent, Uzbekistan</span>
+              <span className="flex items-center gap-1"><Phone size={12} /> {profile?.phone ?? '—'}</span>
+              <span className="flex items-center gap-1"><Mail size={12} /> {profile?.email?.trim() || '—'}</span>
+              <span className="flex items-center gap-1"><MapPin size={12} /> —</span>
             </div>
             <div className="flex items-center gap-4 mt-3">
-              <Rating value={4.8} count={12} />
-              <span className="text-xs text-neutral-400 flex items-center gap-1"><Clock size={10} /> Member since Jan 2026</span>
+              {reviews.length > 0 ? (
+                <Rating value={4.8} count={reviews.length} />
+              ) : (
+                <span className="text-xs text-neutral-400">No public reviews yet</span>
+              )}
             </div>
           </div>
           <Button variant="outline" size="sm" icon={<Edit3 size={14} />}>Edit Profile</Button>
@@ -86,12 +91,12 @@ export default function ProfilePage() {
               {activeTab === 0 && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <Input label="First Name" value={userName.split(' ')[0] || userName} />
-                    <Input label="Last Name" value={userName.split(' ')[1] || ''} />
+                    <Input label="First Name" value={userName.split(' ')[0] || userName} readOnly />
+                    <Input label="Last Name" value={userName.split(' ')[1] || ''} readOnly />
                   </div>
-                  <Input label="Phone Number" value="+998 90 123 45 67" icon={<Phone size={14} />} />
-                  <Input label="Email" value="user@example.com" type="email" icon={<Mail size={14} />} />
-                  <Input label="Default Address" value="Chilanzar, Block 7, Tashkent" icon={<MapPin size={14} />} />
+                  <Input label="Phone Number" value={profile?.phone ?? ''} icon={<Phone size={14} />} readOnly />
+                  <Input label="Email" value={profile?.email ?? ''} type="email" icon={<Mail size={14} />} readOnly />
+                  <Input label="Default Address" value="" placeholder="Not set" icon={<MapPin size={14} />} readOnly />
                   <div className="flex justify-end pt-2">
                     <Button>Save Changes</Button>
                   </div>
@@ -100,39 +105,26 @@ export default function ProfilePage() {
 
               {activeTab === 1 && (
                 <div className="space-y-4 animate-fade-in">
-                  <div className="flex items-center gap-4 p-4 bg-neutral-50 rounded-xl mb-4">
-                    <div className="text-center">
-                      <p className="text-3xl font-bold text-neutral-900">4.8</p>
-                      <div className="flex gap-0.5 justify-center mt-1">
-                        {[1,2,3,4,5].map(s => <Star key={s} size={14} className={s <= 4 ? 'text-amber-400 fill-amber-400' : 'text-amber-400 fill-amber-100'} />)}
-                      </div>
-                      <p className="text-xs text-neutral-400 mt-1">12 reviews</p>
-                    </div>
-                    <div className="flex-1 space-y-1.5">
-                      {[5,4,3,2,1].map(star => (
-                        <div key={star} className="flex items-center gap-2">
-                          <span className="text-xs text-neutral-500 w-3">{star}</span>
-                          <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-400 rounded-full" style={{ width: star === 5 ? '65%' : star === 4 ? '25%' : star === 3 ? '8%' : '2%' }} />
+                  {reviews.length === 0 ? (
+                    <p className="text-sm text-neutral-500 py-6 text-center">No reviews yet.</p>
+                  ) : (
+                    <>
+                      {reviews.map(r => (
+                        <div key={r.id} className="flex gap-3 pb-4 border-b border-neutral-100 last:border-0">
+                          <Avatar name={r.author} size="sm" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-neutral-900">{r.author}</p>
+                              <span className="text-xs text-neutral-400">{r.date}</span>
+                            </div>
+                            <Rating value={r.rating} size={11} />
+                            <p className="text-sm text-neutral-600 mt-1.5">{r.text}</p>
+                            <Badge variant="outline" size="sm">{r.category}</Badge>
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                  {reviews.map(r => (
-                    <div key={r.id} className="flex gap-3 pb-4 border-b border-neutral-100 last:border-0">
-                      <Avatar name={r.author} size="sm" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-neutral-900">{r.author}</p>
-                          <span className="text-xs text-neutral-400">{r.date}</span>
-                        </div>
-                        <Rating value={r.rating} size={11} />
-                        <p className="text-sm text-neutral-600 mt-1.5">{r.text}</p>
-                        <Badge variant="outline" size="sm">{r.category}</Badge>
-                      </div>
-                    </div>
-                  ))}
+                    </>
+                  )}
                 </div>
               )}
 

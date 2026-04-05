@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store/store';
-import { categories, tasks, taskers, formatPrice, statusConfig } from '../data/mockData';
+import { categories, tasks, taskers, formatPrice, statusConfig } from '../lib/taskDisplay';
 import { Button, Card, Avatar, Rating, Badge, Input, TextArea, Select, PriceRange, LocationBadge, TimeBadge, VerifiedBadge } from '../components/ui';
 import {
   Search, SlidersHorizontal, MapPin, Clock, ArrowRight, ArrowLeft,

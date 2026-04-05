@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store/store';
-import { chatMessages } from '../data/mockData';
+import type { ChatMessage } from '../store/store';
 import { Button, Avatar, Badge } from '../components/ui';
 import { Send, ArrowLeft, Phone, MoreVertical, Paperclip, CheckCheck, Image } from 'lucide-react';
 
 export default function ChatPage() {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState(chatMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMsg, setNewMsg] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -36,13 +35,13 @@ export default function ChatPage() {
           <button onClick={() => navigate('/dashboard')} className="text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer lg:hidden">
             <ArrowLeft size={20} />
           </button>
-          <Avatar name="Usmon Ochilov" size="md" verified />
+          <Avatar name="?" size="md" />
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-neutral-900">Usmon Ochilov</h2>
-              <Badge variant="success" size="sm">Online</Badge>
+              <h2 className="text-sm font-semibold text-neutral-900">Chat</h2>
+              <Badge variant="outline" size="sm">—</Badge>
             </div>
-            <p className="text-xs text-neutral-400">Deep cleaning for 3-bedroom apartment</p>
+            <p className="text-xs text-neutral-400">Select a task or user to start messaging</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
